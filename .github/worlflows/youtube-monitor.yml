@@ -1,0 +1,24 @@
+name: YouTube Monitor @mnt_manuti
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Monitorear YouTube
+        run: |
+          RESPONSE=$(curl -s "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=UCEzV_-rw2Ib-e5MRYfXdxhQ&order=date&maxResults=1&type=video&key=AIzaSyAjvRKMrhidhaUakTcKf7bMdoJ8IzItiCM")
+          
+          TITLE=$(echo "$RESPONSE" | grep -o '"title":"[^"]*' | head -1 | cut -d'"' -f4)
+          DESCRIPTION=$(echo "$RESPONSE" | grep -o '"description":"[^"]*' | head -1 | cut -d'"' -f4)
+          VIDEO_ID=$(echo "$RESPONSE" | grep -o '"videoId":"[^"]*' | head -1 | cut -d'"' -f4)
+          
+          MESSAGE="🎬 $TITLE | 📝 $DESCRIPTION | 🔗 https://youtube.com/watch?v=$VIDEO_ID"
+          
+          curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
+            -H 'Content-Type: application/json' \
+            -d "{\"content\":\"$MESSAGE\"}"
