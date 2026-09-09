@@ -1,0 +1,26 @@
+services:
+  - type: worker
+    name: youtube-monitor
+    runtime: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    disk:
+      name: youtube-monitor-state
+      mountPath: /opt/render/project/src
+      sizeGB: 1
+    envVars:
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: CLIENT_ID
+        sync: false
+      - key: GUILD_ID
+        sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: YOUTUBE_CHANNEL_ID
+        value: UCEzV_-rw2Ib-e5MRYfXdxhQ
+      - key: DISCORD_WEBHOOK_URL
+        sync: false
+      - key: STATE_FILE
+        value: /opt/render/project/src/state.json

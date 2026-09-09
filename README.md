@@ -1,92 +1,202 @@
-# 🎬 YouTube Monitor - Discord Notifier
+# Monitor autónomo de YouTube → Discord + comando `/prueba`
 
-Automáticamente monitorea el canal de YouTube @mnt_manuti y envía notificaciones a Discord cada 15 minutos.
+Este proyecto **no usa Make**. Es un bot de Discord que permanece conectado y hace lo siguiente:
 
-## ✅ Archivos que necesitas
+1. Consulta el canal público de YouTube cada **15 minutos (900 segundos)**.
+2. Detecta vídeos nuevos, directos activos y directos programados mediante YouTube Data API v3.
+3. Envía una notificación al webhook de Discord únicamente cuando encuentra un elemento no notificado.
+4. Guarda los IDs procesados en `state.json` para evitar duplicados tras reinicios, si el alojamiento conserva el disco.
+5. Permite `/prueba` únicamente a usuarios con permisos de moderación.
 
-Este proyecto tiene solo **1 archivo:**
+## Arquitectura
 
-```
-.github/workflows/youtube-monitor.yml
-```
-
-## 📋 Estructura del proyecto
-
-```
-youtube-monitor/
-├── .github/
-│   └── workflows/
-│       └── youtube-monitor.yml
-└── README.md
+```text
+Bot autónomo
+  ├─ cada 900 segundos → YouTube Data API
+  │                         └─ vídeo nuevo → webhook → #avisos-youtube
+  └─ /prueba → comprueba permisos → webhook → #avisos-youtube
 ```
 
-## 🚀 Pasos para configurar
+El webhook ya apunta al canal `#avisos-youtube`, por lo que **no se necesita `CHANNEL_ID`**. El `GUILD_ID` sí se necesita para registrar rápidamente el comando slash en el servidor.
 
-### 1️⃣ Crear el repositorio
+## Configuración equivalente a la solicitada
+
+El programa utiliza estos valores lógicos:
+
+| Configuración | Valor |
+|---|---|
+| Canal de YouTube | `UCEzV_-rw2Ib-e5MRYfXdxhQ` |
+| Consulta | `part=snippet`, `order=date`, `maxResults=1`, `type=video` |
+| Intervalo | `900000 ms` = 900 segundos = 15 minutos |
+| Método YouTube | `GET` |
+| Headers YouTube | Ninguno |
+| Body YouTube | Ninguno |
+| Método Discord | `POST` |
+| Header Discord | `Content-Type: application/json` |
+| Body Discord | JSON generado por el programa |
+
+La clave de YouTube y la URL del webhook no se guardan en el código; se introducen mediante variables de entorno.
+
+## Archivos
+
+- `index.js`: monitor de YouTube, webhook y comando `/prueba`.
+- `package.json`: dependencia y comando de inicio.
+- `.env.example`: plantilla de variables.
+- `.gitignore`: evita subir secretos y dependencias.
+
+## Variables de entorno
+
+Copia `.env.example` como `.env` en una ejecución local, o créalas en el panel del servicio donde alojes el bot:
+
+```env
+DISCORD_TOKEN=token_del_bot
+CLIENT_ID=application_id
+GUILD_ID=id_del_servidor
+YOUTUBE_API_KEY=clave_nueva_de_youtube
+YOUTUBE_CHANNEL_ID=UCEzV_-rw2Ib-e5MRYfXdxhQ
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/WEBHOOK_NUEVO
+```
+
+No necesitas `CHANNEL_ID`: el webhook ya está asociado al canal de Discord. `GUILD_ID` significa el ID del servidor, no el del canal.
+
+## Crear el bot de Discord
+
+Entra en [Discord Developer Portal](https://discord.com/developers/applications):
+
+1. Pulsa **New Application**.
+2. Entra en **Bot** y pulsa **Add Bot**.
+3. Copia el token como `DISCORD_TOKEN`.
+4. En **General Information**, copia el **Application ID** como `CLIENT_ID`.
+5. Activa el modo desarrollador en Discord y copia el ID del servidor como `GUILD_ID`.
+6. Invita el bot con los scopes `bot` y `applications.commands`.
+7. Dale permisos mínimos para estar en el servidor. El mensaje de prueba lo envía el webhook.
+
+El comando `/prueba` permite el uso a miembros con alguno de estos permisos:
+
+- **Moderar miembros** (`Moderate Members`)
+- **Gestionar mensajes** (`Manage Messages`)
+- **Administrador** (`Administrator`)
+
+## Crear la clave de YouTube
+
+En [Google Cloud Console](https://console.cloud.google.com/):
+
+1. Crea o selecciona un proyecto.
+2. Activa **YouTube Data API v3**.
+3. Crea una API key.
+4. Restringe la clave a YouTube Data API v3 si es posible.
+5. Guarda la clave como `YOUTUBE_API_KEY`.
+
+El canal se consulta públicamente; no es necesario ser propietario del canal de YouTube.
+
+## Configurar el webhook
+
+Crea un webhook nuevo dentro del canal `#avisos-youtube` y guarda la URL como `DISCORD_WEBHOOK_URL`.
+
+Los webhooks y las claves API que aparecieron en la conversación han quedado expuestos. Debes eliminarlos o revocarlos y generar otros nuevos antes de poner el bot en producción.
+
+## Subirlo a Render
+
+Para ejecutarlo sin mantener el ordenador encendido:
+
+1. Crea un repositorio privado en [GitHub](https://github.com/).
+2. Sube `index.js`, `package.json`, `.env.example`, `.gitignore` y `README.md`.
+3. No subas `.env`, tokens, claves API ni URLs de webhook reales.
+4. Entra en [Render](https://render.com/).
+5. Selecciona **New → Background Worker**.
+6. Conecta el repositorio.
+7. Configura:
+
+| Campo | Valor |
+|---|---|
+| Runtime | `Node` |
+| Build Command | `npm install` |
+| Start Command | `npm start` |
+
+8. Añade en **Environment Variables**:
+
+| Nombre | Valor |
+|---|---|
+| `DISCORD_TOKEN` | Token del bot |
+| `CLIENT_ID` | Application ID |
+| `GUILD_ID` | ID del servidor |
+| `YOUTUBE_API_KEY` | Clave nueva de YouTube |
+| `YOUTUBE_CHANNEL_ID` | `UCEzV_-rw2Ib-e5MRYfXdxhQ` |
+| `DISCORD_WEBHOOK_URL` | Webhook nuevo |
+
+9. Pulsa **Create Background Worker**.
+
+El servicio debe mantenerse activo para consultar cada 15 minutos. Algunos planes gratuitos pueden suspender procesos; para un funcionamiento 24/7 real utiliza un plan que mantenga activo el worker o un servidor siempre encendido.
+
+## Cómo comprobar que funciona
+
+En los logs debes ver mensajes parecidos a:
+
+```text
+Comando /prueba registrado en el servidor.
+Bot conectado como ...
+Monitor de YouTube iniciado: intervalo de 900 segundos.
+```
+
+El bot realiza una primera consulta al conectarse y, después, consulta cada 15 minutos.
+
+### Prueba de `/prueba`
+
+En Discord escribe:
+
+```text
+/prueba
+```
+
+Un moderador debe recibir una confirmación privada y `#avisos-youtube` debe recibir un mensaje como:
+
+```text
+✅ Prueba correcta | Ejecutada por Usuario | 2026-...
+```
+
+Prueba también con un usuario sin permisos. Debe recibir:
+
+```text
+No tienes permiso de moderación para usar este comando.
+```
+
+### Prueba del monitor de YouTube
+
+Para verificar el monitor sin esperar 15 minutos:
+
+1. Inicia el bot.
+2. Mira los logs de la primera consulta.
+3. Comprueba si envía el vídeo más reciente a Discord.
+4. Espera al siguiente intervalo y confirma que muestra `Sin vídeo nuevo` si no hay cambios.
+5. Cuando aparezca un vídeo nuevo, debería enviar una notificación con título, descripción y enlace.
+
+El monitor evita duplicados comparando el `videoId` en memoria. Si el proceso se reinicia, pierde ese valor y puede volver a notificar el último vídeo; para evitarlo de forma permanente habría que guardar el último ID en una base de datos o archivo persistente.
+
+## Ejecutarlo localmente
+
+Requiere Node.js 18 o posterior:
+
 ```bash
-git clone https://github.com/TU_USUARIO/youtube-monitor.git
-cd youtube-monitor
+npm install
+cp .env.example .env
+# Edita .env y completa las seis variables
+npm start
 ```
 
-### 2️⃣ Crear las carpetas
-```bash
-mkdir -p .github/workflows
-```
+No cierres la terminal mientras quieras que el bot permanezca conectado.
 
-### 3️⃣ Agregar el archivo workflow
-- Copia el contenido de `youtube-monitor.yml`
-- Crea el archivo en: `.github/workflows/youtube-monitor.yml`
-- Pega el contenido
+## Seguridad
 
-### 4️⃣ Subir a GitHub
-```bash
-git add .
-git commit -m "Add YouTube monitor workflow"
-git push origin main
-```
+Si una credencial se publica accidentalmente:
 
-### 5️⃣ Agregar el Secret
-1. Ve a tu repo en GitHub
-2. Settings → Secrets and variables → Actions
-3. Click "New repository secret"
-4. **Name:** `DISCORD_WEBHOOK`
-5. **Value:** 
-```
-https://discord.com/api/webhooks/1546965033613918404/7ptzXA9cdoKyoqPM8pOEwtKSxX8qP3YMD_yZfUUNWUOP6E1Wrs5iv4pn2m9ufaSHIF_r
-```
-6. Click "Add secret"
+1. Regenera inmediatamente el token del bot.
+2. Elimina y crea un webhook nuevo.
+3. Revoca la API key de Google y crea otra.
+4. Cambia las variables de entorno del servicio.
+5. Revisa el historial de GitHub para confirmar que no quedaron secretos.
 
-### 6️⃣ Prueba
-- Ve a Actions en tu repo
-- Click en "YouTube Monitor @mnt_manuti"
-- Click "Run workflow"
-- ¡Revisa Discord! 🎉
+## Comportamiento actualizado
 
-## 📊 Configuración
+El monitor consulta los últimos 10 elementos del canal cada 15 minutos para reducir el riesgo de perder publicaciones entre comprobaciones. Solo envía vídeos, directos activos o directos programados cuyo `videoId` no figure en `state.json`, y guarda hasta 100 IDs procesados. La primera consulta crea una línea base silenciosa, por lo que no envía avisos antiguos al arrancar.
 
-El workflow se ejecuta:
-- ✅ Automáticamente cada 15 minutos
-- ✅ Manualmente cuando lo solicites desde Actions
-- ✅ 24/7 sin necesidad de servidor
-
-## 🔧 Para cambiar la frecuencia
-
-En `.github/workflows/youtube-monitor.yml`, línea 4:
-
-```yaml
-- cron: '*/15 * * * *'
-```
-
-Cambia el número:
-- `*/5` = cada 5 minutos
-- `*/10` = cada 10 minutos
-- `*/30` = cada 30 minutos
-- `0 * * * *` = cada hora
-
-## 📝 Notas
-
-- GitHub da 2000 minutos/mes gratis
-- El workflow usa tu YouTube API key y webhook de Discord
-- No necesita servidor local corriendo
-
-¡Listo! 🚀
+Para que la deduplicación sobreviva a reinicios, el alojamiento debe conservar `state.json` en un disco persistente. Si el alojamiento utiliza almacenamiento efímero, el bot puede volver a notificar el último elemento después de reiniciarse.
