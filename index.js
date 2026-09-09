@@ -31,7 +31,7 @@ let initialized = false;
 let checking = false;
 
 const command = new SlashCommandBuilder()
-  .setName('prueba')
+  .setName('probar')
   .setDescription('Envía una notificación de prueba al canal configurado');
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
@@ -156,7 +156,7 @@ client.once('ready', async () => {
 });
 
 client.on('interactionCreate', async (interaction) => {
-  if (!interaction.isChatInputCommand() || interaction.commandName !== 'prueba') return;
+  if (!interaction.isChatInputCommand() || interaction.commandName !== 'probar') return;
   if (!canModerate(interaction)) {
     await interaction.reply({ content: 'No tienes permiso de moderación para usar este comando.', ephemeral: true });
     return;

@@ -1,4 +1,4 @@
-# Monitor autónomo de YouTube → Discord + comando `/prueba`
+# Monitor autónomo de YouTube → Discord + comando `/probar`
 
 Este proyecto **no usa Make**. Es un bot de Discord que permanece conectado y hace lo siguiente:
 
@@ -6,7 +6,7 @@ Este proyecto **no usa Make**. Es un bot de Discord que permanece conectado y ha
 2. Detecta vídeos nuevos, directos activos y directos programados mediante YouTube Data API v3.
 3. Envía una notificación al webhook de Discord únicamente cuando encuentra un elemento no notificado.
 4. Guarda los IDs procesados en `state.json` para evitar duplicados tras reinicios, si el alojamiento conserva el disco.
-5. Permite `/prueba` únicamente a usuarios con permisos de moderación.
+5. Permite `/probar` únicamente a usuarios con permisos de moderación.
 
 ## Arquitectura
 
@@ -14,7 +14,7 @@ Este proyecto **no usa Make**. Es un bot de Discord que permanece conectado y ha
 Bot autónomo
   ├─ cada 900 segundos → YouTube Data API
   │                         └─ vídeo nuevo → webhook → #avisos-youtube
-  └─ /prueba → comprueba permisos → webhook → #avisos-youtube
+  └─ /probar → comprueba permisos → webhook → #avisos-youtube
 ```
 
 El webhook ya apunta al canal `#avisos-youtube`, por lo que **no se necesita `CHANNEL_ID`**. El `GUILD_ID` sí se necesita para registrar rápidamente el comando slash en el servidor.
@@ -39,7 +39,7 @@ La clave de YouTube y la URL del webhook no se guardan en el código; se introdu
 
 ## Archivos
 
-- `index.js`: monitor de YouTube, webhook y comando `/prueba`.
+- `index.js`: monitor de YouTube, webhook y comando `/probar`.
 - `package.json`: dependencia y comando de inicio.
 - `.env.example`: plantilla de variables.
 - `.gitignore`: evita subir secretos y dependencias.
@@ -71,7 +71,7 @@ Entra en [Discord Developer Portal](https://discord.com/developers/applications)
 6. Invita el bot con los scopes `bot` y `applications.commands`.
 7. Dale permisos mínimos para estar en el servidor. El mensaje de prueba lo envía el webhook.
 
-El comando `/prueba` permite el uso a miembros con alguno de estos permisos:
+El comando `/probar` permite el uso a miembros con alguno de estos permisos:
 
 - **Moderar miembros** (`Moderate Members`)
 - **Gestionar mensajes** (`Manage Messages`)
@@ -133,19 +133,19 @@ El servicio debe mantenerse activo para consultar cada 15 minutos. Algunos plane
 En los logs debes ver mensajes parecidos a:
 
 ```text
-Comando /prueba registrado en el servidor.
+Comando /probar registrado en el servidor.
 Bot conectado como ...
 Monitor de YouTube iniciado: intervalo de 900 segundos.
 ```
 
 El bot realiza una primera consulta al conectarse y, después, consulta cada 15 minutos.
 
-### Prueba de `/prueba`
+### Prueba de `/probar`
 
 En Discord escribe:
 
 ```text
-/prueba
+/probar
 ```
 
 Un moderador debe recibir una confirmación privada y `#avisos-youtube` debe recibir un mensaje como:
